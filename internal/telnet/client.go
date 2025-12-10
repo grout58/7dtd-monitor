@@ -66,35 +66,40 @@ func (c *Client) SendCommand(cmd string) (string, error) {
 	}
 	c.writer.Flush()
 
-	// Read response. This is tricky with Telnet as there is no specific EOF.
-	// We rely on the fact that the server usually sends a newline at the end of the block?
-	// Or we wait for a bit. For 7DTD, commands usually return immediate output.
-	// A robust solution reads until a known prompt, but 7DTD telnet is raw.
-	// We'll read buffered available data after a short sleep to allow server to process.
-	// *Note*: In a real prod client we'd be smarter, but this is simple for now.
-
-	time.Sleep(100 * time.Millisecond)
+	// Wait a bit for the server to process strings
+	// 7DTD can be slow.
+	time.Sleep(300 * time.Millisecond)
 
 	var output strings.Builder
 	buffer := make([]byte, 4096)
 
-	// Read at least once
+	// Read Loop
+	// We want to keep reading as long as there is data, or until a strict timeout.
+	// Since we don't have a specific EOF/Prompt, we rely on a short inactivity timeout between chunks.
+
+	// First read (blocking with timeout)
+	c.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	n, err := c.conn.Read(buffer)
 	if err != nil {
+		// If timeout and no data, we might return empty (cmd had no output?)
+		// But usually we get at least the log line.
+		if strings.Contains(err.Error(), "timeout") {
+			return "", nil
+		}
 		return "", err
 	}
 	output.Write(buffer[:n])
 
-	// Attempt to read more if available
-	// This is blocking, but we set a very short Read deadline just to check buffer
-	c.conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+	// Subsequent reads: shorter timeout to drain buffer
 	for {
+		c.conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
 		n, err := c.conn.Read(buffer)
 		if n > 0 {
 			output.Write(buffer[:n])
 		}
 		if err != nil {
-			break // Timeout or EOF
+			// Timeout means we are done reading for now
+			break
 		}
 	}
 	// Reset deadline

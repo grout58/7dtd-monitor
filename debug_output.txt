@@ -1,0 +1,22 @@
+=== TIME ===
+2025-12-10T10:35:08 1991.171 INF Executing command 'gettime' by Telnet from 10.0.2.12:38754
+Day 95, 06:10
+
+=== MEM ===
+2025-12-10T10:35:09 1991.370 INF Executing command 'mem' by Telnet from 10.0.2.12:38754
+=== LPI ===
+
+Time: 32.55m FPS: 14.07 Heap: 1918.7MB Max: 1918.7MB Chunks: 249 CGO: 23 Ply: 1 Zom: 0 Ent: 3 (3) Items: 0 CO: 1 RSS: 2924.3MB
+Observers
+ id=1
+
+=== LE ===
+2025-12-10T10:35:09 1991.928 INF Executing command 'lpi' by Telnet from 10.0.2.12:38754
+1. id=33132, Grout
+Total of 1 in the game
+2025-12-10T10:35:09 1991.932 INF Executing command 'le' by Telnet from 10.0.2.12:38754
+1. id=33134, [type=EntityAnimalRabbit, name=animalChicken, id=33134], pos=(42.4, 37.1, 1238.4), rot=(0.0, 41.3, 0.0), lifetime=float.Max, remote=False, dead=False, health=10
+2. id=33133, [type=EntityAnimalRabbit, name=animalRabbit, id=33133], pos=(-23.5, 37.7, 1202.2), rot=(0.0, 359.6, 0.0), lifetime=float.Max, remote=False, dead=False, health=8
+3. id=33132, [type=EntityPlayer, name=Grout, id=33132], pos=(14.3, 37.2, 1240.8), rot=(-16.9, 206.7, 0.0), lifetime=float.Max, remote=True, dead=False, health=100
+Total of 3 in the game
+
