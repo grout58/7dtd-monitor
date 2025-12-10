@@ -85,18 +85,32 @@ func (a *App) updateData() {
 	timeStr, _ := a.Client.SendCommand("gettime")
 	gameTime := parser.ParseTime(timeStr)
 
-	// 2. Get Mem
+	// 2. Get Mem & FPS
 	memStr, _ := a.Client.SendCommand("mem")
-	heap, max := parser.ParseMem(memStr)
+	heap, max, fps := parser.ParseMem(memStr)
 
 	// 3. Get Players
 	playersStr, _ := a.Client.SendCommand("lpi")
 	players, _ := parser.ParsePlayers(playersStr)
 
+	// 4. Get Entities
+	entStr, _ := a.Client.SendCommand("le")
+	zombies, animals, _ := parser.ParseEntities(entStr)
+
+	// Calculate Avg Ping
+	var totalPing int
+	for _, p := range players {
+		totalPing += p.Ping
+	}
+	avgPing := 0
+	if len(players) > 0 {
+		avgPing = totalPing / len(players)
+	}
+
 	a.TviewApp.QueueUpdateDraw(func() {
 		// Update Stats
-		statsText := fmt.Sprintf("\n [green]Host:[white] %s\n [green]Port:[white] %s\n\n [yellow]Game Time:[white] %s\n\n [blue]Heap:[white] %s / %s\n [blue]Players:[white] %d",
-			a.Client.Host, a.Client.Port, gameTime, heap, max, len(players))
+		statsText := fmt.Sprintf("\n [green]Host:[white] %s\n [green]Port:[white] %s\n\n [yellow]Game Time:[white] %s\n [yellow]Server FPS:[white] %s\n\n [blue]Heap:[white] %s / %s\n [blue]Players:[white] %d\n [blue]Avg Ping:[white] %d ms\n\n [red]Zombies:[white] %d\n [green]Animals:[white] %d",
+			a.Client.Host, a.Client.Port, gameTime, fps, heap, max, len(players), avgPing, zombies, animals)
 		a.StatsText.SetText(statsText)
 
 		// Update Table

@@ -57,8 +57,18 @@ func handleConnection(conn net.Conn) {
 3. id=175, Newbie, pos=(-1060.0, 64.0, 880.0), rot=(0.0, 0.0, 0.0), remote=True, health=100, deaths=0, zombies=0, players=0, score=0, level=1, steamid=76561199000000001, ip=10.0.0.99, ping=120
 `
 		case "mem":
+			// Output simulates 7DTD memory output often containing FPS
 			response = `Heap: 2500.5 MB, Max: 3500.0 MB, Objects: 150000
 GC: 120.5 MB
+FPS: 58.4
+`
+		case "le":
+			response = `Total of 5 entities in the game
+1. id=171, name=Survivor (PL), ... type=Player
+2. id=801, name=Zombie Boe, ... type=Zombie
+3. id=802, name=Zombie Joe, ... type=Zombie
+4. id=803, name=Stag, ... type=Animal
+5. id=804, name=Bear, ... type=Animal
 `
 		case "gettime":
 			response = `Day 7, 21:45

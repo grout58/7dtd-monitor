@@ -20,7 +20,7 @@ func ParsePlayers(output string) ([]model.Player, error) {
 		if len(matches) > 10 {
 			// clean up name (removes potential trailing commas or spaces if regex is greedy)
 			// name is at index 2
-			
+
 			level, _ := strconv.Atoi(matches[7])
 			health, _ := strconv.Atoi(matches[3])
 			deaths, _ := strconv.Atoi(matches[4])
@@ -46,14 +46,49 @@ func ParsePlayers(output string) ([]model.Player, error) {
 	return players, nil
 }
 
-func ParseMem(output string) (heapUsed string, heapMax string) {
-	// Example: Heap: 2500.5 MB, Max: 3500.0 MB...
-	// Simple string contains check or crude split for now
+func ParseMem(output string) (heapUsed string, heapMax string, fps string) {
+	// Example: Heap: 2500.5 MB, Max: 3500.0 MB, ... FPS: 58.4
 	if strings.Contains(output, "Heap:") {
+		output = strings.ReplaceAll(output, "\n", " ")
 		parts := strings.Split(output, ",")
 		if len(parts) >= 2 {
 			heapUsed = strings.TrimPrefix(strings.TrimSpace(parts[0]), "Heap: ")
-			heapMax = strings.TrimPrefix(strings.TrimSpace(parts[1]), "Max: ")
+			// Max is bit trickier if order varies, but usually 2nd.
+			// Let's rely on string searching for robustness
+		}
+	}
+
+	// Robust extract (regex is safer for these mixed strings)
+	reHeap := regexp.MustCompile(`Heap:\s*([\d\.]+\s*MB)`)
+	reMax := regexp.MustCompile(`Max:\s*([\d\.]+\s*MB)`)
+	reFps := regexp.MustCompile(`FPS:\s*([\d\.]+)`)
+
+	if m := reHeap.FindStringSubmatch(output); len(m) > 1 {
+		heapUsed = m[1]
+	}
+	if m := reMax.FindStringSubmatch(output); len(m) > 1 {
+		heapMax = m[1]
+	}
+	if m := reFps.FindStringSubmatch(output); len(m) > 1 {
+		fps = m[1]
+	}
+
+	return
+}
+
+func ParseEntities(output string) (zombies, animals, other int) {
+	// Simple line scan
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		lower := strings.ToLower(line)
+		if strings.Contains(lower, "type=zombie") {
+			zombies++
+		} else if strings.Contains(lower, "type=animal") {
+			animals++
+		} else if strings.Contains(lower, "type=player") {
+			// ignore, we get players from lpi
+		} else if strings.Contains(lower, "id=") {
+			other++
 		}
 	}
 	return
