@@ -7,22 +7,41 @@ import (
 	"strings"
 )
 
-// Helper to remove log lines from Telnet output
-func sanitizeOutput(output string) string {
+// SplitLogs separates actual command output from server log lines
+func SplitLogs(output string) (cleanData string, logs []string) {
 	lines := strings.Split(output, "\n")
 	var cleanLines []string
+
 	for _, line := range lines {
-		// Filter out lines that look like logs
-		// e.g. "2025-12-10T10:35:08 1991.171 INF Executing command..."
+		// Log lines typically start with timestamp, or are "INF Executing..."
+		// 7DTD Logs: "2025-..." or "INF ..."
+		// Robust check: date format or INF/WRN/ERR
+		isLog := false
 		if strings.Contains(line, "INF Executing command") {
-			continue
+			isLog = true
+		} else if len(line) > 20 && line[4] == '-' && line[7] == '-' && line[10] == 'T' {
+			// 2025-12-10T... crude ISO check
+			isLog = true
+		} else if strings.Contains(line, "INF") || strings.Contains(line, "WRN") || strings.Contains(line, "ERR") {
+			// Common log levels
+			isLog = true
 		}
-		if strings.TrimSpace(line) == "" {
-			continue
+
+		if isLog {
+			logs = append(logs, line)
+		} else {
+			if strings.TrimSpace(line) != "" {
+				cleanLines = append(cleanLines, line)
+			}
 		}
-		cleanLines = append(cleanLines, line)
 	}
-	return strings.Join(cleanLines, "\n")
+	return strings.Join(cleanLines, "\n"), logs
+}
+
+// Helper to remove log lines from Telnet output
+func sanitizeOutput(output string) string {
+	clean, _ := SplitLogs(output)
+	return clean
 }
 
 // Robust Key-Value parser instead of strict Regex
@@ -93,9 +112,17 @@ func ParsePlayers(output string) ([]model.Player, error) {
 		p.Health = getInt("health")
 		p.Deaths = getInt("deaths")
 		p.Zombies = getInt("zombies")
+		p.PlayerKills = getInt("players")
 		p.Score = getInt("score")
 		p.Ping = getInt("ping")
 		p.SteamID = stats["steamid"]
+		if p.SteamID == "" {
+			// Fallback for 'lp' command which uses pltfmid
+			// e.g. pltfmid=Steam_7656...
+			if val, ok := stats["pltfmid"]; ok {
+				p.SteamID = val
+			}
+		}
 		p.IP = stats["ip"]
 
 		// Fallback for Name if not found in 2nd position (unlikely but safe)
@@ -154,13 +181,40 @@ func ParseEntities(output string) (zombies, animals, other int) {
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		lower := strings.ToLower(line)
-		if strings.Contains(lower, "type=zombie") {
+
+		// 7DTD types are usually "EntityZombie", "EntityPlayer", "EntityAnimal"
+		// But in old versions or logs they might differ.
+		// Check for Zombies
+		if strings.Contains(lower, "zombie") && strings.Contains(lower, "type=") {
 			zombies++
-		} else if strings.Contains(lower, "type=animal") || strings.Contains(lower, "type=entityanimal") {
+			continue
+		}
+
+		// Check for Animals (Specific types often don't say "Animal")
+		// "type=EntityStag", "type=EntityBoar", "EntityRabbit", "EntityWolf", "EntityBear"
+		isAnimal := false
+		animalKeywords := []string{
+			"animal", "stag", "boar", "rabbit", "wolf", "bear",
+			"chicken", "snake", "vulture", "coyote", "pig",
+		}
+		for _, kw := range animalKeywords {
+			if strings.Contains(lower, kw) && strings.Contains(lower, "type=") {
+				isAnimal = true
+				break
+			}
+		}
+		if isAnimal {
 			animals++
-		} else if strings.Contains(lower, "type=player") {
-			// ignore, we get players from lpi
-		} else if strings.Contains(lower, "id=") {
+			continue
+		}
+
+		// Ignore Players (counted elsewhere)
+		if strings.Contains(lower, "player") && strings.Contains(lower, "type=") {
+			continue
+		}
+
+		// Count everything else as "Other" (Backpacks, Items, SupplyCrates)
+		if strings.Contains(lower, "id=") {
 			other++
 		}
 	}

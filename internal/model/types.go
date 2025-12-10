@@ -4,16 +4,17 @@ import "time"
 
 // Player represents a single connected player
 type Player struct {
-	ID        string
-	Name      string
-	Level     int
-	Health    int
-	Deaths    int
-	Zombies   int
-	Score     int
-	Ping      int
-	SteamID   string
-	IP        string
+	ID          string
+	Name        string
+	Level       int
+	Health      int
+	Deaths      int
+	Zombies     int
+	PlayerKills int // "players=X" in output
+	Score       int
+	Ping        int
+	SteamID     string
+	IP          string
 }
 
 // ServerStats holds the aggregate state of the server
